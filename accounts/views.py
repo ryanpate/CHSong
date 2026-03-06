@@ -20,17 +20,27 @@ def register_view(request):
         if form.is_valid():
             user = form.save(commit=False)
             user.set_password(form.cleaned_data['password'])
-            user.is_active = False
-            user.save()
-            token = EmailVerificationToken.objects.create(user=user)
-            verify_url = request.build_absolute_uri(f'/accounts/verify/{token.token}/')
-            send_mail(
-                subject='Verify your Cherry Hills Song account',
-                message=f'Click here to verify your email:\n\n{verify_url}',
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-            )
-            return redirect('accounts:verify_sent')
+            # If SMTP is configured, require email verification
+            email_configured = bool(getattr(settings, 'EMAIL_HOST', ''))
+            if email_configured:
+                user.is_active = False
+                user.save()
+                token = EmailVerificationToken.objects.create(user=user)
+                verify_url = request.build_absolute_uri(f'/accounts/verify/{token.token}/')
+                send_mail(
+                    subject='Verify your Cherry Hills Song account',
+                    message=f'Click here to verify your email:\n\n{verify_url}',
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.email],
+                )
+                return redirect('accounts:verify_sent')
+            else:
+                user.is_active = True
+                user.email_verified = True
+                user.save()
+                login(request, user)
+                messages.success(request, 'Account created! Welcome!')
+                return redirect('songs:dashboard')
     else:
         form = RegisterForm()
     return render(request, 'accounts/register.html', {'form': form})
