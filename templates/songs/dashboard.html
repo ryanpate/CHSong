@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="dashboard-header">
+    <h1>Song Suggestions</h1>
+    <div class="dashboard-controls">
+        <form method="get" class="search-form">
+            <input type="text" name="q" value="{{ q }}" placeholder="Search songs or artists...">
+            {% if sort != 'newest' %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+            <button type="submit" class="btn btn-sm">Search</button>
+        </form>
+        <div class="sort-links">
+            <span>Sort:</span>
+            <a href="?sort=newest{% if q %}&q={{ q }}{% endif %}" class="{% if sort == 'newest' %}active{% endif %}">Newest</a>
+            <a href="?sort=top_rated{% if q %}&q={{ q }}{% endif %}" class="{% if sort == 'top_rated' %}active{% endif %}">Top Rated</a>
+            <a href="?sort=most_comments{% if q %}&q={{ q }}{% endif %}" class="{% if sort == 'most_comments' %}active{% endif %}">Most Comments</a>
+        </div>
+    </div>
+</div>
+
+{% if songs %}
+    <div class="song-grid">
+        {% for song in songs %}
+            <a href="{% url 'songs:detail' song.pk %}" class="song-card">
+                <h3>{{ song.title }}</h3>
+                <p class="song-artist">{{ song.artist }}</p>
+                <div class="song-meta">
+                    <span class="stars">
+                        {% if song.avg_rating %}
+                            {{ song.avg_rating|floatformat:1 }} / 5
+                        {% else %}
+                            No ratings
+                        {% endif %}
+                        ({{ song.rating_count }})
+                    </span>
+                    <span class="comments-count">{{ song.comment_count }} comment{{ song.comment_count|pluralize }}</span>
+                </div>
+                <p class="song-reason">{{ song.reason|truncatewords:20 }}</p>
+                <p class="song-submitted">Submitted {{ song.submitted_at|timesince }} ago</p>
+            </a>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty-state">
+        <p>No songs found. {% if user.is_authenticated %}<a href="{% url 'songs:submit' %}">Submit the first one!</a>{% else %}<a href="{% url 'accounts:login' %}">Log in</a> to submit a song.{% endif %}</p>
+    </div>
+{% endif %}
+{% endblock %}

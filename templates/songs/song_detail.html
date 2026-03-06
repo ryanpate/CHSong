@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{{ song.title }} - Cherry Hills Songs{% endblock %}
+{% block content %}
+<div class="song-detail">
+    <div class="detail-header">
+        <h1>{{ song.title }}</h1>
+        <p class="song-artist">{{ song.artist }}</p>
+        {% if song.song_link %}
+            <a href="{{ song.song_link }}" target="_blank" rel="noopener" class="btn btn-sm">Listen</a>
+        {% endif %}
+    </div>
+
+    <div class="detail-body">
+        <p>{{ song.reason }}</p>
+        <p class="song-submitted">Submitted by {{ song.submitted_by.first_name|default:song.submitted_by.email }} {{ song.submitted_at|timesince }} ago</p>
+    </div>
+
+    <div class="rating-section">
+        <h3>Rating: {% if avg_rating %}{{ avg_rating|floatformat:1 }} / 5 ({{ rating_count }} rating{{ rating_count|pluralize }}){% else %}No ratings yet{% endif %}</h3>
+        {% if user.is_authenticated %}
+            <form method="post" action="{% url 'songs:rate' song.pk %}" class="rating-form">
+                {% csrf_token %}
+                <div class="star-rating">
+                    {% for i in "54321" %}
+                        <input type="radio" name="stars" value="{{ i }}" id="star{{ i }}" {% if user_rating and user_rating.stars|stringformat:"d" == i %}checked{% endif %}>
+                        <label for="star{{ i }}">&#9733;</label>
+                    {% endfor %}
+                </div>
+                <button type="submit" class="btn btn-sm">{% if user_rating %}Update{% else %}Rate{% endif %}</button>
+            </form>
+        {% else %}
+            <p><a href="{% url 'accounts:login' %}">Log in</a> to rate this song.</p>
+        {% endif %}
+    </div>
+
+    <div class="comments-section">
+        <h3>Comments ({{ comments|length }})</h3>
+        {% if user.is_authenticated %}
+            <form method="post" action="{% url 'songs:add_comment' song.pk %}" class="comment-form">
+                {% csrf_token %}
+                <textarea name="body" placeholder="Add a comment..." rows="3" required></textarea>
+                <button type="submit" class="btn btn-sm">Comment</button>
+            </form>
+        {% else %}
+            <p><a href="{% url 'accounts:login' %}">Log in</a> to comment.</p>
+        {% endif %}
+
+        {% for comment in comments %}
+            <div class="comment">
+                <div class="comment-header">
+                    <strong>{{ comment.user.first_name|default:comment.user.email }}</strong>
+                    <span class="comment-date">{{ comment.created_at|timesince }} ago</span>
+                </div>
+                <p>{{ comment.body }}</p>
+
+                {% if user.is_authenticated %}
+                    <button class="reply-toggle btn-link" onclick="this.nextElementSibling.classList.toggle('hidden')">Reply</button>
+                    <form method="post" action="{% url 'songs:add_comment' song.pk %}" class="reply-form hidden">
+                        {% csrf_token %}
+                        <input type="hidden" name="parent" value="{{ comment.pk }}">
+                        <textarea name="body" placeholder="Reply..." rows="2" required></textarea>
+                        <button type="submit" class="btn btn-sm">Reply</button>
+                    </form>
+                {% endif %}
+
+                {% for reply in comment.replies.all %}
+                    <div class="comment reply">
+                        <div class="comment-header">
+                            <strong>{{ reply.user.first_name|default:reply.user.email }}</strong>
+                            <span class="comment-date">{{ reply.created_at|timesince }} ago</span>
+                        </div>
+                        <p>{{ reply.body }}</p>
+                    </div>
+                {% endfor %}
+            </div>
+        {% empty %}
+            <p class="empty-comments">No comments yet. Be the first!</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
